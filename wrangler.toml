@@ -1,0 +1,15 @@
+name = "granit-docs-mcp"
+main = "src/index.ts"
+compatibility_date = "2025-05-01"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+SEARCH_INDEX_URL = "https://granit-fx.dev/search-index.json"
+
+[observability]
+enabled = true
+
+[[kv_namespaces]]
+binding = "DOCS_CACHE"
+id = "PLACEHOLDER_KV_ID"
+preview_id = "PLACEHOLDER_KV_PREVIEW_ID"
