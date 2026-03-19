@@ -39,11 +39,11 @@ Three index sources:
 - **search-index.json** — granit-dotnet/docs-site,
   `generate-search-index.mjs` (existing), hosted on CF Pages
 - **code-index.json** — granit-dotnet,
-  `generate-code-index.mjs` (RoslynLens via MCP stdio),
-  hosted as GitHub Release Asset
+  `docs-site/scripts/generate-code-index.mjs` (regex-based C# parser),
+  published as GitHub Release Asset on version tags
 - **front-index.json** — granit-front,
   `generate-front-index.mjs` (ts-morph),
-  hosted as GitHub Release Asset
+  published as GitHub Release Asset on version tags
 
 NuGet package data is fetched at runtime from the public NuGet API
 (no token required) and cached in KV.
@@ -61,14 +61,22 @@ NuGet package data is fetched at runtime from the public NuGet API
 - **get\_package\_info** — versions, deps, frameworks, license
   (NuGet Registration API)
 
-### RoslynLens integration
+### Code index generation
 
-RoslynLens is used **at build time only** — the CI pipeline in
-granit-dotnet installs it as a global dotnet tool, spawns it via
-MCP stdio, and calls `get_project_graph`, `find_symbols_batch`,
-and `get_public_api_batch` to generate a semantic code index. This
-provides Roslyn-level analysis (namespaces, signatures, member
-types) without requiring .NET at runtime.
+The `generate-code-index.mjs` script runs at CI time (Node.js only,
+no .NET required) and uses:
+
+- **Regex-based `.csproj` parsing** — extracts `<TargetFramework>`
+  and `<ProjectReference>` to build the project dependency graph
+- **Regex-based `.cs` parsing** — detects `public` type declarations
+  (`class`, `interface`, `record`, `struct`, `enum`) and their
+  public members (methods, properties, events) with multi-line
+  signature support
+
+This provides namespace-level, signature-level analysis (1509 types,
+2692 members, 172 projects for granit-dotnet) without requiring
+Roslyn or .NET at build time. The output is attached to the GitHub
+Release as a downloadable asset.
 
 ### Cache strategy
 

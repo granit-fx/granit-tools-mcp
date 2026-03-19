@@ -25,7 +25,7 @@ on **Cloudflare Workers** with [Hono](https://hono.dev/) and the
 | `list_packages` | Granit.\* packages with version/downloads |
 | `get_package_info` | Versions, deps, frameworks, license |
 
-### Code navigation (coming soon)
+### Code navigation
 
 | Tool | Description |
 | ---- | ----------- |
@@ -66,16 +66,28 @@ Add the MCP server in **Settings > MCP Servers**:
 # Install dependencies
 pnpm install
 
-# Generate the search index from the docs site
+# Generate the docs search index
 cd ../granit-dotnet/docs-site
 node scripts/generate-search-index.mjs
 
 # Serve the built docs locally (includes search-index.json)
 python3 -m http.server 4322 -d dist &
 
+# Generate the code index (from granit-dotnet repo root)
+cd ..
+node docs-site/scripts/generate-code-index.mjs
+# Output: code-index.json at repo root
+
 # Start local Worker
-cd ../../granit-docs-mcp
+cd ../granit-docs-mcp
 pnpm dev
+```
+
+Create `.dev.vars` to point to local indexes:
+
+```ini
+SEARCH_INDEX_URL=http://localhost:4322/search-index.json
+CODE_INDEX_URL=file:///path/to/granit-dotnet/code-index.json
 ```
 
 Test with the MCP Inspector:
@@ -111,6 +123,19 @@ browsing, commits, PRs, and issues.
 | `front-index.json` | GitHub Release (granit-front) | 12 h |
 | NuGet package list | NuGet Search API | 12 h |
 | NuGet package info | NuGet Registration API | 6 h |
+
+### Code index generation
+
+The `generate-code-index.mjs` script (in `granit-dotnet/docs-site/scripts/`)
+parses `.csproj` files and `.cs` source files with regex to extract:
+
+- **Project graph** — all projects with their dependencies and target frameworks
+- **Public symbols** — classes, interfaces, records, structs, enums
+- **Public members** — methods (with signatures), properties, events
+
+The script handles multi-line signatures and partial classes. It runs with
+Node.js only (no .NET required). Output for granit-dotnet: ~1500 types,
+~2700 members, 172 projects, ~730 KB.
 
 ### Search index categories
 

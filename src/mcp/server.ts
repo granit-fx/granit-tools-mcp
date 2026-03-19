@@ -5,6 +5,9 @@ import { handleModuleRef } from '../tools/module-ref.js';
 import { handleListPatterns } from '../tools/patterns.js';
 import { handleListPackages } from '../tools/list-packages.js';
 import { handlePackageInfo } from '../tools/package-info.js';
+import { handleSearchCode } from '../tools/search-code.js';
+import { handlePublicApi } from '../tools/public-api.js';
+import { handleProjectGraph } from '../tools/project-graph.js';
 import type { Env } from '../index.js';
 
 export function createMcpServer(env: Env): McpServer {
@@ -13,7 +16,12 @@ export function createMcpServer(env: Env): McpServer {
     version: '2.0.0',
   });
 
-  const { CACHE: cache, SEARCH_INDEX_URL: indexUrl } = env;
+  const {
+    CACHE: cache,
+    SEARCH_INDEX_URL: indexUrl,
+    CODE_INDEX_URL: codeIndexUrl,
+    FRONT_INDEX_URL: frontIndexUrl,
+  } = env;
 
   // ─── search_granit_docs ───────────────────────────────────────────────────
   server.registerTool(
@@ -69,6 +77,84 @@ export function createMcpServer(env: Env): McpServer {
     },
     async () => {
       const text = await handleListPatterns(indexUrl, cache);
+      return { content: [{ type: 'text', text }] };
+    },
+  );
+
+  // ─── search_code ─────────────────────────────────────────────────────────────
+  server.registerTool(
+    'search_code',
+    {
+      description:
+        'Search across Granit source code symbols (types, methods, interfaces, enums). ' +
+        'Returns ranked matches with name, kind, project, file path, and signature. ' +
+        'Searches pre-built code indexes for both .NET (granit-dotnet) and TypeScript (granit-front).',
+      inputSchema: {
+        query: z.string().min(1).describe('Search query — type name, method name, or keywords'),
+        repo: z
+          .enum(['dotnet', 'front'])
+          .optional()
+          .describe('Restrict search to a specific repo. Omit to search both.'),
+        kind: z
+          .string()
+          .optional()
+          .describe('Filter by symbol kind: "class", "interface", "method", "enum", "record", "function", "type"'),
+        limit: z.number().int().min(1).max(20).default(10).describe('Maximum results (default 10, max 20)'),
+      },
+    },
+    async ({ query, repo, kind, limit }) => {
+      const text = await handleSearchCode(
+        { query, repo, kind, limit: limit ?? 10 },
+        codeIndexUrl,
+        frontIndexUrl,
+        cache,
+      );
+      return { content: [{ type: 'text', text }] };
+    },
+  );
+
+  // ─── get_public_api ─────────────────────────────────────────────────────────
+  server.registerTool(
+    'get_public_api',
+    {
+      description:
+        'Retrieves the full public API surface of a Granit type — all public methods, properties, and events with their signatures. ' +
+        'Works for both .NET types (from granit-dotnet) and TypeScript exports (from granit-front). ' +
+        'Use when you need detailed member information for a specific type like IBlobStorage, ICurrentTenant, etc.',
+      inputSchema: {
+        type: z
+          .string()
+          .min(1)
+          .describe('Type name, e.g. "IBlobStorage", "GranitModule", "createApiClient". Case-insensitive.'),
+        repo: z
+          .enum(['dotnet', 'front'])
+          .optional()
+          .describe('Restrict to a specific repo. Omit to search both.'),
+      },
+    },
+    async ({ type, repo }) => {
+      const text = await handlePublicApi({ type, repo }, codeIndexUrl, frontIndexUrl, cache);
+      return { content: [{ type: 'text', text }] };
+    },
+  );
+
+  // ─── get_project_graph ──────────────────────────────────────────────────────
+  server.registerTool(
+    'get_project_graph',
+    {
+      description:
+        'Shows the project/package dependency graph for the Granit framework. ' +
+        'Lists all .NET projects (with NuGet dependencies) and/or TypeScript packages. ' +
+        'Use to understand how modules relate to each other.',
+      inputSchema: {
+        repo: z
+          .enum(['dotnet', 'front'])
+          .optional()
+          .describe('Restrict to a specific repo. Omit to show both.'),
+      },
+    },
+    async ({ repo }) => {
+      const text = await handleProjectGraph({ repo }, codeIndexUrl, frontIndexUrl, cache);
       return { content: [{ type: 'text', text }] };
     },
   );
