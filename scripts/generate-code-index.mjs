@@ -198,18 +198,26 @@ function tryParseEvent(cleanLine) {
   return {
     name: evMatch[2],
     kind: 'event',
-    signature: cleanLine.replaceAll(/\s*[{;].*$/g, '').replace(/^public\s+/, ''),
+    signature: cleanLine.replace(/\s*[{;].*$/, '').replace(/^public\s+/, ''),
   };
 }
 
 function tryParseMethod(noAccess) {
   if (!noAccess.includes('(')) return null;
-  const methodMatch = noAccess.match(/^([\w<>\[\]?,.\s]+?)\s+(\w+)\s*(<[^>]+>)?\s*\(([^)]*)\)/);
-  if (!methodMatch) return null;
-  const retType = methodMatch[1].trim();
-  const name = methodMatch[2];
-  const generics = methodMatch[3] || '';
-  const params = methodMatch[4].trim();
+  // Match return type + name + params. Use atomic-like approach: return type
+  // is everything before the last identifier before '(', captured greedily
+  // up to whitespace + word boundary.
+  const parenIdx = noAccess.indexOf('(');
+  if (parenIdx === -1) return null;
+  const beforeParen = noAccess.substring(0, parenIdx).trimEnd();
+  const nameMatch = beforeParen.match(/^(.+)\s+(\w+)$/);
+  if (!nameMatch) return null;
+  const retType = nameMatch[1].trim();
+  const name = nameMatch[2];
+  const genericsMatch = noAccess.substring(parenIdx).match(/^(<[^>]+>)?\s*\(([^)]*)\)/);
+  if (!genericsMatch) return null;
+  const generics = genericsMatch[1] || '';
+  const params = genericsMatch[2].trim();
   return { name, kind: 'method', signature: `${name}${generics}(${params})`, returnType: retType };
 }
 
@@ -218,10 +226,14 @@ function tryParseProperty(line, noAccess, typeKind) {
   const isInterfaceProp = typeKind === 'interface' && /;\s*}/.test(line);
   if (!isGetSet && !isInterfaceProp) return null;
 
-  const propMatch = noAccess.match(/^([\w<>,.\s]+?)\s+(\w+)\s*[{=]/);
-  if (!propMatch) return null;
-  const retType = propMatch[1].trim();
-  const name = propMatch[2];
+  // Find the property name (last identifier before { or =)
+  const propSigEnd = noAccess.search(/\s*[{=]/);
+  if (propSigEnd === -1) return null;
+  const propSig = noAccess.substring(0, propSigEnd).trimEnd();
+  const propParts = propSig.match(/^(.+)\s+(\w+)$/);
+  if (!propParts) return null;
+  const retType = propParts[1].trim();
+  const name = propParts[2];
   return { name, kind: 'property', signature: `${retType} ${name}`, returnType: retType };
 }
 
