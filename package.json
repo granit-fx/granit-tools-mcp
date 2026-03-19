@@ -4,6 +4,7 @@
   "private": true,
   "description": "MCP server for Granit framework — documentation, code navigation, and NuGet packages over Cloudflare Workers",
   "license": "Apache-2.0",
+  "packageManager": "pnpm@10.30.2",
   "type": "module",
   "scripts": {
     "dev": "wrangler dev",
