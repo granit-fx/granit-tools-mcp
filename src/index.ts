@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js';
 import { createMcpServer } from './mcp/server.js';
+import { checkRateLimit } from './lib/rate-limit.js';
 
 export interface Env {
   CACHE: KVNamespace;
@@ -12,15 +13,31 @@ export interface Env {
 const app = new Hono<{ Bindings: Env }>();
 
 // Global error handler — fail-open: return 503 instead of crashing the Worker.
-// A crash still counts as a billed request on Cloudflare; a clean 503 does too,
-// but it avoids retry storms from clients that interpret a TCP-level failure as
-// "try again immediately".
 app.onError((err, c) => {
   console.error('[granit-mcp] Unhandled error:', err.message);
   return c.json(
     { error: 'internal_error', message: 'The MCP server encountered an error. Please retry later.' },
     503,
   );
+});
+
+// Rate limiting — 60 req/min per IP (in-memory, resets on cold start)
+app.use('*', async (c, next) => {
+  const ip = c.req.header('cf-connecting-ip') ?? c.req.header('x-forwarded-for') ?? 'unknown';
+  const result = checkRateLimit(ip);
+
+  c.header('X-RateLimit-Limit', '60');
+  c.header('X-RateLimit-Remaining', String(result.remaining));
+  c.header('X-RateLimit-Reset', String(Math.ceil(result.resetAt / 1000)));
+
+  if (!result.allowed) {
+    return c.json(
+      { error: 'rate_limited', message: 'Too many requests. Please retry after 1 minute.' },
+      429,
+    );
+  }
+
+  await next();
 });
 
 // Health check
