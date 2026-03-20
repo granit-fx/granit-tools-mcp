@@ -43,8 +43,8 @@ app.use('*', async (c, next) => {
 // Health check
 app.get('/', (c) => c.json({ name: 'granit-mcp', version: '2.0.0', status: 'ok' }));
 
-// MCP endpoint — Streamable HTTP transport (stateless: one transport per request)
-app.all('/mcp', async (c) => {
+// MCP endpoint — Streamable HTTP transport (stateless, POST-only)
+app.post('/mcp', async (c) => {
   const server = createMcpServer(c.env);
 
   const transport = new WebStandardStreamableHTTPServerTransport({
@@ -55,6 +55,16 @@ app.all('/mcp', async (c) => {
   await server.connect(transport);
   return transport.handleRequest(c.req.raw);
 });
+
+// GET /mcp — SSE not supported on stateless transport
+app.get('/mcp', (c) =>
+  c.json({ error: 'method_not_allowed', message: 'This server uses Streamable HTTP (POST only). SSE transport is not supported.' }, 405),
+);
+
+// DELETE /mcp — no sessions to terminate
+app.delete('/mcp', (c) =>
+  c.json({ error: 'method_not_allowed', message: 'Session termination is not supported (stateless server).' }, 405),
+);
 
 // Catch-all: reject unknown paths early to avoid unnecessary processing
 app.all('*', (c) => c.json({ error: 'not_found', endpoints: ['/', '/mcp'] }, 404));
