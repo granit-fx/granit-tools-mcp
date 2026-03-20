@@ -4,8 +4,8 @@
  */
 
 const REPOS = {
-  dotnet: { owner: 'granit-fx', repo: 'granit-dotnet', indexFile: 'code-index.json' },
-  front: { owner: 'granit-fx', repo: 'granit-front', indexFile: 'front-index.json' },
+  dotnet: { owner: 'granit-fx', repo: 'granit-dotnet', indexFile: '.mcp-code-index.json' },
+  front: { owner: 'granit-fx', repo: 'granit-front', indexFile: '.mcp-front-index.json' },
 } as const;
 
 type RepoKey = keyof typeof REPOS;

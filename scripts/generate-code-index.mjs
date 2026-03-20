@@ -1,5 +1,5 @@
 /**
- * Generates a structured code index (code-index.json) from the Granit .NET source.
+ * Generates a structured code index (.mcp-code-index.json) from the Granit .NET source.
  *
  * Parses all public types and their public members from .cs files under src/,
  * plus the project dependency graph from .csproj files.
@@ -7,7 +7,7 @@
  * Output is published as a GitHub Release asset and consumed by the granit-mcp Worker.
  *
  * Usage (from granit-dotnet repo root):
- *   node <path-to>/generate-code-index.mjs [--src ./src] [--out ./code-index.json]
+ *   node <path-to>/generate-code-index.mjs [--src ./src] [--out ./.mcp-code-index.json]
  *
  * This script lives in granit-docs-mcp but runs against granit-dotnet source.
  * Copy it to granit-dotnet/docs-site/scripts/ or reference it directly.
@@ -24,7 +24,7 @@ const __dir = dirname(fileURLToPath(import.meta.url));
 function parseArgs() {
   const args = process.argv.slice(2);
   let srcRoot = join(process.cwd(), 'src');
-  let output = join(process.cwd(), 'code-index.json');
+  let output = join(process.cwd(), '.mcp-code-index.json');
   let repoRoot = process.cwd();
 
   for (let i = 0; i < args.length; i++) {
@@ -370,7 +370,7 @@ writeFileSync(OUTPUT, JSON.stringify(index, null, 2), 'utf-8');
 
 const sizeKb = (JSON.stringify(index).length / 1024).toFixed(0);
 const totalMembers = symbols.reduce((n, s) => n + s.members.length, 0);
-console.log(`\n✓ code-index.json generated:`);
+console.log(`\n✓ .mcp-code-index.json generated:`);
 console.log(`  ${symbols.length} types, ${totalMembers} members`);
 console.log(`  ${projectGraph.length} projects in dependency graph`);
 console.log(`  ${sizeKb} KB`);

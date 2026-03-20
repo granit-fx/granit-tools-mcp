@@ -1,12 +1,12 @@
 /**
- * Generates a structured front-end code index (front-index.json) from
+ * Generates a structured front-end code index (.mcp-front-index.json) from
  * the Granit TypeScript monorepo (granit-front).
  *
  * Parses all public exports from each @granit/* package by reading
  * the src/index.ts entry points and extracting exported declarations.
  *
  * Usage (from granit-front repo root):
- *   node <path-to>/generate-front-index.mjs [--root .] [--out ./front-index.json]
+ *   node <path-to>/generate-front-index.mjs [--root .] [--out ./.mcp-front-index.json]
  *
  * This script lives in granit-mcp but runs against granit-front source.
  */
@@ -22,7 +22,7 @@ const __dir = dirname(fileURLToPath(import.meta.url));
 function parseArgs() {
   const args = process.argv.slice(2);
   let root = process.cwd();
-  let output = join(process.cwd(), 'front-index.json');
+  let output = join(process.cwd(), '.mcp-front-index.json');
 
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--root' && args[i + 1]) {
@@ -467,6 +467,6 @@ const totalMembers = result.reduce(
 );
 const sizeKb = (JSON.stringify(index).length / 1024).toFixed(0);
 
-console.log(`\n✓ front-index.json generated:`);
+console.log(`\n✓ .mcp-front-index.json generated:`);
 console.log(`  ${packages.length} packages, ${totalExports} exports, ${totalMembers} members`);
 console.log(`  ${sizeKb} KB`);
