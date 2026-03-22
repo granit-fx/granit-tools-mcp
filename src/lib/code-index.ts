@@ -35,7 +35,6 @@ export interface ProjectNode {
 }
 
 export interface CodeIndex {
-  generatedAt: string;
   repo: string;
   projectGraph: ProjectNode[];
   symbols: CodeSymbol[];
@@ -57,7 +56,6 @@ export interface FrontPackage {
 }
 
 export interface FrontIndex {
-  generatedAt: string;
   repo: string;
   packages: FrontPackage[];
 }

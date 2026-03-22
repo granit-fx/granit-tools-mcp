@@ -453,7 +453,6 @@ for (const pkg of packages) {
 }
 
 const index = {
-  generatedAt: new Date().toISOString(),
   repo: 'granit-front',
   packages: result,
 };

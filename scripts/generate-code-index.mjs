@@ -360,7 +360,6 @@ for (const sym of allSymbols) {
 const symbols = [...byFqn.values()].sort((a, b) => a.fqn.localeCompare(b.fqn));
 
 const index = {
-  generatedAt: new Date().toISOString(),
   repo: 'granit-dotnet',
   projectGraph,
   symbols,
