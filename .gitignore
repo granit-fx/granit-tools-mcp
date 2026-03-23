@@ -1,6 +1,13 @@
-node_modules/
-dist/
-.wrangler/
+# .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
 
-# Local dev overrides
-.dev.vars
+# NuGet
+nupkgs/
+*.nupkg
+
+# Granit MCP data
+.granit-mcp/
