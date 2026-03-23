@@ -34,6 +34,7 @@ Claude Code ──stdio──> Granit.Mcp (local .NET 10 tool)
 | `src/Granit.Mcp/Services/NuGetClient.cs` | NuGet API client |
 | `src/Granit.Mcp/Services/GitBranchDetector.cs` | .git/HEAD branch detection |
 | `src/Granit.Mcp/Tools/*.cs` | 10 MCP tool handlers |
+| `tests/Granit.Mcp.Tests/*.cs` | xUnit tests (FTS5, config, branch) |
 
 ## Building
 
