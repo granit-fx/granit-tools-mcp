@@ -1,22 +1,35 @@
 # granit-mcp
 
-Remote MCP server for the [Granit framework](https://granit-fx.dev) — gives AI
+[![GitHub](https://img.shields.io/badge/github-repo-blue?logo=github)](https://github.com/granit-fx/granit-mcp)
+[![NuGet](https://img.shields.io/nuget/v/Granit.Mcp?logo=nuget)](https://www.nuget.org/packages/Granit.Mcp)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=granit-fx_granit-mcp&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=granit-fx_granit-mcp)
+[![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
+
+Local MCP server for the [Granit framework](https://granit-fx.dev) — gives AI
 assistants (Claude Code, Cursor, Windsurf) structured access to documentation,
 code navigation, and NuGet package metadata.
 
-Powered by a **pre-built JSON search index** and the **NuGet public API**, running
-on **Cloudflare Workers** with [Hono](https://hono.dev/) and the
-[Model Context Protocol SDK](https://modelcontextprotocol.io/).
+Built as a **.NET 10 dotnet tool** with **SQLite FTS5** for full-text search
+and the [Model Context Protocol SDK](https://modelcontextprotocol.io/).
 
-## Tools
+## Tools (10)
 
 ### Documentation
 
 | Tool | Description |
 | ---- | ----------- |
-| `search_granit_docs` | Full-text TF-IDF search across docs |
-| `get_module_reference` | Complete reference for a module |
-| `list_patterns` | Architecture patterns by platform |
+| `search_docs` | FTS5 search — returns ID, title, snippet |
+| `get_doc` | Full article content by ID |
+| `list_patterns` | Architecture patterns list |
+
+### Code navigation
+
+| Tool | Description |
+| ---- | ----------- |
+| `search_code` | Search symbols across .NET and TS |
+| `get_public_api` | Public API of a type with signatures |
+| `get_project_graph` | Project/package dependency graph |
+| `list_branches` | Branches with committed code indexes |
 
 ### NuGet packages
 
@@ -25,28 +38,19 @@ on **Cloudflare Workers** with [Hono](https://hono.dev/) and the
 | `list_packages` | Granit.\* packages with version/downloads |
 | `get_package_info` | Versions, deps, frameworks, license |
 
-### Code navigation (coming soon)
-
-| Tool | Description |
-| ---- | ----------- |
-| `search_code` | Search symbols across .NET and TS |
-| `get_public_api` | Public API of a type with signatures |
-| `get_project_graph` | Project/package dependency graph |
-
-## Use with Claude Code
+## Install
 
 ```bash
-claude mcp add granit-mcp --transport http https://mcp.granit-fx.dev/mcp
+dotnet tool install --global Granit.Mcp
 ```
 
-Or add to your project's `.mcp.json`:
+## Use with Claude Code
 
 ```json
 {
   "mcpServers": {
-    "granit-mcp": {
-      "type": "url",
-      "url": "https://mcp.granit-fx.dev/mcp"
+    "granit": {
+      "command": "granit-mcp"
     }
   }
 }
@@ -56,93 +60,51 @@ Or add to your project's `.mcp.json`:
 
 Add the MCP server in **Settings > MCP Servers**:
 
-- **Name:** `granit-mcp`
-- **Type:** `http`
-- **URL:** `https://mcp.granit-fx.dev/mcp`
-
-## Local development
-
-```bash
-# Install dependencies
-pnpm install
-
-# Generate the search index from the docs site
-cd ../granit-dotnet/docs-site
-node scripts/generate-search-index.mjs
-
-# Serve the built docs locally (includes search-index.json)
-python3 -m http.server 4322 -d dist &
-
-# Start local Worker
-cd ../../granit-docs-mcp
-pnpm dev
-```
-
-Test with the MCP Inspector:
-
-```bash
-npx @modelcontextprotocol/inspector http://localhost:8787/mcp
-```
+- **Name:** `granit`
+- **Command:** `granit-mcp`
 
 ## Architecture
 
 ```text
-AI Assistant
-  |  MCP Streamable HTTP
-  v
-Cloudflare Worker (mcp.granit-fx.dev)
-  |
-  +-- Docs tools -----> search-index.json (CF Pages, 24h KV cache)
-  +-- Code tools -----> code-index.json   (GitHub Release, 12h KV cache)
-  |                     front-index.json  (GitHub Release, 12h KV cache)
-  +-- NuGet tools ----> api.nuget.org     (public, 6-12h KV cache)
+Claude Code ──stdio──> Granit.Mcp (local .NET 10 tool)
+                         |-- Docs ---------> SQLite FTS5
+                         |                     ^ llms-full.txt (auto-generated)
+                         |-- Code ---------> .mcp-*-index.json (GitHub raw)
+                         |-- NuGet --------> api.nuget.org
+                         +-- Branches -----> api.github.com
 ```
-
-Complementary with the
-[GitHub MCP Server](https://github.com/github/github-mcp-server) for file
-browsing, commits, PRs, and issues.
 
 ### Data sources
 
-| Source | Origin | Cache TTL |
-| ------ | ------ | --------- |
-| `search-index.json` | CF Pages (granit-fx.dev) | 24 h |
-| `code-index.json` | GitHub Release (granit-dotnet) | 12 h |
-| `front-index.json` | GitHub Release (granit-front) | 12 h |
-| NuGet package list | NuGet Search API | 12 h |
-| NuGet package info | NuGet Registration API | 6 h |
+| Source | Origin | Cache |
+| ------ | ------ | ----- |
+| Documentation | `granit-fx.dev/llms-full.txt` | SQLite (4h refresh) |
+| .NET code index | GitHub raw (branch-aware) | In-memory (12h) |
+| Front code index | GitHub raw (branch-aware) | In-memory (12h) |
+| NuGet packages | NuGet Search API | In-memory (12h) |
+| NuGet package info | NuGet Registration API | In-memory (6h) |
 
-### Search index categories
+### Branch detection
 
-| Category | Source path | Count |
-| -------- | ----------- | ----- |
-| `module` | `/dotnet/{core,data,security,api,...}/` | ~69 |
-| `pattern` | `/dotnet/architecture/patterns/` | ~56 |
-| `adr` | `/dotnet/architecture/adr/` | ~26 |
-| `guide` | `/dotnet/guides/` | ~25 |
-| `frontend` | `/frontend/` | ~25 |
-| `concept` | `/dotnet/concepts/` | ~12 |
-| `community` | `/contributing/`, `/troubleshooting/` | ~13 |
-| `getting-started` | `/dotnet/getting-started/` | ~8 |
+The tool reads `.git/HEAD` from the current working directory and uses
+the detected branch for code index tools by default. Explicit `branch`
+parameter overrides this.
 
-## Deployment
+## Development
 
-Automatic on push to `main` or when triggered by `granit-dotnet` after a docs
-deploy (`repository_dispatch: docs-deployed`).
-
-### Required secrets
-
-| Secret | Purpose |
-| ------ | ------- |
-| `CLOUDFLARE_API_TOKEN` | Wrangler deploy to Cloudflare Workers |
-| `CLOUDFLARE_ACCOUNT_ID` | Cloudflare account identifier |
+```bash
+dotnet build
+dotnet run --project src/Granit.Mcp
+```
 
 ## ADRs
 
 - [ADR-001](docs/adr/001-json-index-cloudflare-workers.md) —
-  JSON index + Cloudflare Workers
+  JSON index + Cloudflare Workers (superseded)
 - [ADR-002](docs/adr/002-granit-mcp-code-and-packages.md) —
-  Code navigation & NuGet packages
+  Code navigation & NuGet packages (superseded)
+- [ADR-003](docs/adr/003-local-dotnet-tool-with-fts5.md) —
+  Local .NET tool with SQLite FTS5
 
 ## License
 

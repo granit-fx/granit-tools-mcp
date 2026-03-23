@@ -1,6 +1,28 @@
-node_modules/
-dist/
-.wrangler/
+# .NET
+bin/
+obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+.vs/
+.idea/
 
-# Local dev overrides
-.dev.vars
+# NuGet
+nupkgs/
+*.nupkg
+
+# Test results
+TestResults/
+coverage/
+
+# Granit MCP data
+.granit-mcp/
+
+# OS artifacts
+.DS_Store
+Thumbs.db
+
+# Editor temp files
+*.swp
+*~
